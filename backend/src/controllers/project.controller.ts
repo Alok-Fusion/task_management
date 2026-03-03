@@ -18,6 +18,7 @@ import {
   projectDeletedTemplate,
   projectUpdatedTemplate,
 } from "../utils/emailTemplates";
+import { logActivity } from "../utils/logActivity";
 import { roleGuard } from "../utils/roleGuard";
 import { sendEmail } from "../utils/sendEmail";
 import {
@@ -102,6 +103,7 @@ export const createProjectController = asyncHandler(
       projectCreatedTemplate,
       `New Project Created: ${project.emoji || "📁"} ${project.name}`
     );
+    logActivity(workspaceId, userId, "project_created", "project", project.name);
 
     return res.status(HTTPSTATUS.CREATED).json({
       message: "Project created successfully",

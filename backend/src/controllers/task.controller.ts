@@ -18,6 +18,7 @@ import {
   taskDeletedTemplate,
   taskUpdatedTemplate,
 } from "../utils/emailTemplates";
+import { logActivity } from "../utils/logActivity";
 import { roleGuard } from "../utils/roleGuard";
 import { sendEmail } from "../utils/sendEmail";
 import { projectIdSchema } from "../validation/project.validation";
@@ -45,6 +46,9 @@ export const createTaskController = asyncHandler(
       userId,
       body
     );
+
+    // Log activity
+    logActivity(workspaceId, userId, "task_created", "task", task.title);
 
     // Send email to assignee (fire-and-forget)
     if (body.assignedTo) {
@@ -120,6 +124,9 @@ export const updateTaskController = asyncHandler(
       taskId,
       updateBody
     );
+
+    // Log activity
+    logActivity(workspaceId, userId, "task_status_changed", "task", body.title, { newStatus: body.status });
 
     // Send email to assignee if they changed (fire-and-forget)
     if (body.assignedTo) {
@@ -234,6 +241,9 @@ export const deleteTaskController = asyncHandler(
     } catch (_) { }
 
     await deleteTaskService(workspaceId, taskId);
+
+    // Log activity
+    logActivity(workspaceId, userId, "task_deleted", "task", taskTitle);
 
     // Send email to previously assigned user (fire-and-forget)
     if (assignedToId) {

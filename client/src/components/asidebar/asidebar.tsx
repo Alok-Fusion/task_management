@@ -1,19 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { EllipsisIcon, Loader, LogOut } from "lucide-react";
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarGroupContent,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
-  SidebarRail,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import Logo from "@/components/logo";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,20 +8,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Logo from "@/components/logo";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail
+} from "@/components/ui/sidebar";
+import { useAuthContext } from "@/context/auth-provider";
+import useWorkspaceId from "@/hooks/use-workspace-id";
+import { EllipsisIcon, Loader, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Separator } from "../ui/separator";
 import LogoutDialog from "./logout-dialog";
-import { WorkspaceSwitcher } from "./workspace-switcher";
 import { NavMain } from "./nav-main";
 import { NavProjects } from "./nav-projects";
-import { Separator } from "../ui/separator";
-import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useAuthContext } from "@/context/auth-provider";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 
 const Asidebar = () => {
   const { isLoading, user } = useAuthContext();
 
-  const { open } = useSidebar();
   const workspaceId = useWorkspaceId();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -46,14 +43,6 @@ const Asidebar = () => {
         <SidebarHeader className="!py-0 dark:bg-background">
           <div className="flex h-[50px] items-center justify-start w-full px-1">
             <Logo url={`/workspace/${workspaceId}`} />
-            {open && (
-              <Link
-                to={`/workspace/${workspaceId}`}
-                className="hidden md:flex ml-2 items-center gap-2 self-center font-medium"
-              >
-                Team Sync.
-              </Link>
-            )}
           </div>
         </SidebarHeader>
         <SidebarContent className=" !mt-0 dark:bg-background">
@@ -116,6 +105,12 @@ const Asidebar = () => {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
+        <div className="px-3 py-2 text-center">
+          <p className="text-[10px] text-muted-foreground/60 leading-tight">
+            Built by{" "}
+            <span className="font-semibold text-muted-foreground/80">Alok Kushwaha</span>
+          </p>
+        </div>
         <SidebarRail />
       </Sidebar>
 

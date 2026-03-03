@@ -284,3 +284,69 @@ export const deleteTaskMutationFn = async ({
   );
   return response.data;
 };
+
+//**** ANALYTICS ****//
+
+export const getWorkspaceActivityQueryFn = async ({
+  workspaceId,
+  page = 1,
+  limit = 30,
+}: {
+  workspaceId: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  activities: any[];
+  pagination: { total: number; page: number; limit: number; pages: number };
+}> => {
+  const response = await API.get(
+    `/analytics/workspace/${workspaceId}/activity?page=${page}&limit=${limit}`
+  );
+  return response.data;
+};
+
+export const getWorkspaceHealthQueryFn = async (
+  workspaceId: string
+): Promise<{
+  health: {
+    memberId: string;
+    name: string;
+    profilePicture: string;
+    role: string;
+    healthScore: number;
+    status: "healthy" | "at_risk" | "overloaded";
+    stats: { totalOpen: number; overdue: number; highPriorityOpen: number };
+  }[];
+  teamAvgScore: number;
+}> => {
+  const response = await API.get(
+    `/analytics/workspace/${workspaceId}/health`
+  );
+  return response.data;
+};
+
+//**** AI ****//
+
+export const aiEnhanceTaskMutationFn = async (data: {
+  title: string;
+  projectName?: string;
+  workspaceName?: string;
+  existingDescription?: string;
+}): Promise<{
+  description: string;
+  suggestedPriority: string;
+  estimatedHours: number;
+  checklistItems: string[];
+}> => {
+  const response = await API.post("/ai/enhance-task", data);
+  return response.data;
+};
+
+export const aiSuggestTasksMutationFn = async (data: {
+  partialTitle: string;
+  projectName?: string;
+}): Promise<{ suggestions: string[] }> => {
+  const response = await API.post("/ai/suggest-tasks", data);
+  return response.data;
+};
+

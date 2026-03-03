@@ -26,12 +26,13 @@ const baseTemplate = (title: string, body: string) => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>📋 Task Manager</h1>
+      <h1>🔗 Team Sync</h1>
       <p>${title}</p>
     </div>
     <div class="body">${body}</div>
     <div class="footer">
-      © ${new Date().getFullYear()} Task Manager &mdash; You're receiving this because you're a member of a workspace.
+      © ${new Date().getFullYear()} <strong>Team Sync</strong> &mdash; Built by <a href="#" style="color:#6366f1;text-decoration:none;">Alok Kushwaha</a><br/>
+      You're receiving this because you're a member of a workspace.
     </div>
   </div>
 </body>
@@ -214,6 +215,30 @@ export const projectDeletedTemplate = (
       <p>👤 <span>Deleted by:</span> ${deletedByName}</p>
     </div>
     <a href="${config.FRONTEND_ORIGIN}" class="btn">Go to Workspace →</a>
-  `
+    `
     );
 
+export const burnoutAlertTemplate = (
+    memberName: string,
+    workspaceName: string,
+    totalOpen: number,
+    overdue: number,
+    highPriority: number,
+    score: number
+) =>
+    baseTemplate(
+        "⚠️ Workload Alert — You May Be Overloaded",
+        `
+    <h2>Hi ${memberName}, your workload looks heavy 🔥</h2>
+    <p>Your current task load in <strong>${workspaceName}</strong> has been flagged as potentially overwhelming. Here's a quick summary:</p>
+    <div class="meta-box">
+      <p>📊 <span>Health Score:</span> ${score}/100 — <strong style="color:#ef4444;">Overloaded</strong></p>
+      <p>📋 <span>Open Tasks:</span> ${totalOpen}</p>
+      <p>🚨 <span>Overdue Tasks:</span> ${overdue}</p>
+      <p>🔥 <span>High-Priority Open:</span> ${highPriority}</p>
+    </div>
+    <p>We recommend talking to your workspace admin about redistributing some tasks to keep things sustainable.</p>
+    <a href="${config.FRONTEND_ORIGIN}" class="btn">Review My Tasks →</a>
+    <p style="font-size:12px;color:#aaa;margin-top:16px;">This alert is sent automatically when your health score drops below 50. You'll only receive it once per 24 hours.</p>
+  `
+    );

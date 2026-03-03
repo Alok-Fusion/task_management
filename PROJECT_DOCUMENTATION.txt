@@ -1,0 +1,969 @@
+================================================================================
+                        TEAM SYNC — PROJECT DOCUMENTATION
+                        Full-Stack Collaborative Task Management Platform
+                        Author: Alok Kushwaha
+                        Version: 1.0.0
+                        Date: March 2026
+================================================================================
+
+TABLE OF CONTENTS
+─────────────────
+ 1. Problem Statement
+ 2. Solution Overview
+ 3. Target Users
+ 4. Feature List
+ 5. System Architecture
+ 6. Tech Stack
+ 7. Data Models / Database Schema
+ 8. API Architecture
+ 9. Data Flow Diagrams
+10. Authentication & Security
+11. Permission System
+12. Email Notification System
+13. AI Integration
+14. Activity Feed
+15. Team Burnout Radar
+16. Real-Time Data Sync
+17. Environment Configuration
+18. Project Directory Structure
+19. Deployment Notes
+
+
+================================================================================
+1. PROBLEM STATEMENT
+================================================================================
+
+Modern software teams — especially distributed or hybrid ones — struggle with
+several interconnected challenges:
+
+ a) TASK VISIBILITY CHAOS
+    Team members have no single source of truth for what is being worked on,
+    what's overdue, and who is responsible for what.
+
+ b) COMMUNICATION OVERHEAD
+    Important events (new task assignments, project updates, member joins) are
+    communicated via external chat tools, which leads to missed notifications
+    and context switching.
+
+ c) TEAM BURNOUT BLINDNESS
+    Managers have no way to proactively detect when a team member is
+    overloaded with tasks until it becomes a performance issue. Burnout is
+    reactive, not preventive.
+
+ d) AUDIT TRAIL GAPS
+    There is no history of who did what and when in a workspace. This makes
+    debugging project failures and reviewing team activity impossible.
+
+ e) TASK CREATION FRICTION
+    Writing good task descriptions takes time. Team members often create
+    vague tasks like "Fix the bug" without any actionable detail, leading to
+    confusion and re-work.
+
+ f) PERMISSION INFLEXIBILITY
+    Most task managers have rigid permission systems. A task assignee who
+    wants to simply mark their task as "done" often cannot do so without
+    full edit permissions — creating unnecessary friction.
+
+
+================================================================================
+2. SOLUTION OVERVIEW
+================================================================================
+
+Team Sync is a B2B collaborative workspace and task management platform that
+solves the above problems with 6 key innovations:
+
+ ✅ UNIFIED WORKSPACE
+    A single platform for all team activity — projects, tasks, members,
+    and analytics — organized in shareable workspaces.
+
+ ✅ PROACTIVE EMAIL NOTIFICATIONS
+    Every meaningful event (task assigned, project created, member joined,
+    role changed) automatically triggers a branded email to all relevant
+    parties, removing the need for manual communication.
+
+ ✅ TEAM BURNOUT RADAR
+    A real-time health scoring system that computes a wellness score (0-100)
+    for each team member based on their overdue tasks, high-priority load,
+    and workload relative to team average. Overloaded members receive
+    automatic email alerts.
+
+ ✅ LIVE ACTIVITY FEED
+    A paginated, real-time audit timeline of every action in the workspace —
+    who created what, when, with what status. Auto-refreshes every 10 seconds.
+
+ ✅ AI-POWERED TASK ENHANCEMENT
+    Uses Google Gemini 1.5 Flash to turn a simple task title into a
+    professional description with priority suggestion and subtask checklist,
+    directly in the task creation form.
+
+ ✅ SMART PERMISSION SYSTEM
+    Role-based access control with a special bypass: task assignees can always
+    update their own task's status, even without the EDIT_TASK permission.
+
+
+================================================================================
+3. TARGET USERS
+================================================================================
+
+PRIMARY USERS
+─────────────
+
+  WORKSPACE OWNER
+  • Creates and administers the workspace
+  • Manages all projects and members
+  • Full access to all features and settings
+  • Receives all notification emails for workspace events
+  • Use case: Engineering Leads, Project Managers, CTO
+
+  WORKSPACE ADMIN
+  • Can create and manage projects, tasks, and members
+  • Can change member roles
+  • Cannot delete the workspace
+  • Use case: Team Leads, Senior Engineers
+
+  WORKSPACE MEMBER
+  • Can view all projects and tasks
+  • Can create tasks but not edit others' tasks (unless assigned)
+  • Can update the status of tasks assigned to them
+  • Use case: Developers, Designers, Analysts
+
+SECONDARY STAKEHOLDERS
+──────────────────────
+
+  INVITED COLLABORATORS
+  • Receive invitation emails with workspace join links
+  • Onboard directly via email invite or invite link
+
+  NOTIFICATION RECIPIENTS
+  • Receive task assignment, update, deletion email digests
+  • Receive burnout alert emails when overloaded
+
+
+================================================================================
+4. FEATURE LIST
+================================================================================
+
+WORKSPACE MANAGEMENT
+ • Create, update, delete workspaces
+ • Unique invite codes for workspace joining
+ • Reset invite code for security
+ • Invite members via direct email (sends styled HTML invite email)
+ • Workspace-level analytics (task completion, project summary)
+
+PROJECT MANAGEMENT
+ • Create projects with custom emoji and name
+ • Update and delete projects
+ • Project-level analytics (tasks by status and priority)
+ • Email notifications to creator + workspace owner on all project events
+
+TASK MANAGEMENT
+ • Create tasks with title, description, status, priority, assignee, due date
+ • Edit all task fields (with EDIT_TASK permission or if you are the assignee)
+ • Delete tasks
+ • Inline status update directly from the task table (click status badge → dropdown)
+ • Filter tasks by status, priority, assignee, project
+ • Task code auto-generation (e.g., TASK-001)
+ • Email notification on assignment, update, and deletion
+
+MEMBER MANAGEMENT
+ • View all workspace members with roles
+ • Change member roles
+ • Email notification when role changes
+ • Email notification to workspace owner when new member joins
+
+AI FEATURES (Google Gemini 1.5 Flash)
+ • ✨ AI Enhance button in the Create Task form
+   — Input: Task title + optional existing description + project name
+   — Output: Professional description, suggested priority, subtask checklist
+ • Suggest task titles (autocomplete suggestions based on partial title)
+
+ACTIVITY FEED
+ • Live timeline of all workspace events
+ • Events tracked: task_created, task_updated, task_deleted, task_status_changed,
+   project_created, project_updated, project_deleted, member_joined,
+   member_role_changed, invite_code_reset, workspace_updated
+ • Actor name + avatar on each event
+ • Color-coded action badges per event type
+ • Relative timestamps ("3 minutes ago")
+ • Pagination with "Newer / Older" navigation
+ • Auto-refreshes every 10 seconds
+ • MongoDB TTL index: activities auto-expire after 90 days
+
+TEAM BURNOUT RADAR
+ • Real-time health score (0-100) per workspace member
+ • Scoring formula:
+   — Base: 100
+   — -15 per overdue task
+   — -8 per high-priority open task
+   — -10 to -20 if workload > 1.2x or 1.5x team average
+ • Status bands: Healthy (80+), At Risk (50-79), Overloaded (<50)
+ • SVG circular progress ring per member (color-coded)
+ • Team-wide average score banner
+ • Auto-sends burnout alert email (max once per 24h per member)
+ • Refreshes every 30 seconds
+
+EMAIL NOTIFICATIONS
+ • Task assigned to you
+ • Task updated (if you are assignee)
+ • Task deleted (if you were assignee)
+ • Project created/updated/deleted (to creator and workspace owner)
+ • Member joined workspace (to workspace owner)
+ • Member role changed (to the member)
+ • Workspace invite (to email address)
+ • Burnout alert (to overloaded member)
+
+
+================================================================================
+5. SYSTEM ARCHITECTURE
+================================================================================
+
+                        ┌───────────────────────────────────┐
+                        │         CLIENT (React 18)          │
+                        │  Vite + TypeScript + Tailwind CSS  │
+                        │  TanStack Query │ React Router v6  │
+                        └─────────────────┬─────────────────┘
+                                          │ HTTPS (Axios)
+                                          │ REST API
+                        ┌─────────────────▼─────────────────┐
+                        │         BACKEND (Node.js)          │
+                        │    Express.js + TypeScript         │
+                        │                                    │
+                        │  ┌────────────┐ ┌──────────────┐  │
+                        │  │  Routers   │ │  Middleware  │  │
+                        │  │ /auth      │ │ isAuthenticated│  │
+                        │  │ /workspace │ │ asyncHandler │  │
+                        │  │ /project   │ │ errorHandler │  │
+                        │  │ /task      │ └──────────────┘  │
+                        │  │ /member    │                   │
+                        │  │ /analytics │ ┌──────────────┐  │
+                        │  │ /ai        │ │  Controllers │  │
+                        │  └────────────┘ │ auth         │  │
+                        │                 │ workspace    │  │
+                        │  ┌────────────┐ │ project      │  │
+                        │  │  Services  │ │ task         │  │
+                        │  │ Business   │ │ member       │  │
+                        │  │ Logic      │ │ analytics    │  │
+                        │  └────────────┘ │ ai           │  │
+                        │                 └──────────────┘  │
+                        └──┬──────────────────────┬─────────┘
+                           │                      │
+             ┌─────────────▼──────┐    ┌──────────▼──────────┐
+             │  MongoDB Atlas     │    │  External Services  │
+             │  ─────────────     │    │  ──────────────────  │
+             │  Users             │    │  Gmail SMTP         │
+             │  Workspaces        │    │  (Nodemailer)       │
+             │  Members           │    │                     │
+             │  Roles             │    │  Google OAuth 2.0   │
+             │  Projects          │    │                     │
+             │  Tasks             │    │  Google Gemini AI   │
+             │  Activities        │    │  (1.5 Flash)        │
+             └────────────────────┘    └─────────────────────┘
+
+LAYER RESPONSIBILITIES
+──────────────────────
+
+  CLIENT LAYER
+  • Renders UI components (shadcn/ui + Tailwind CSS)
+  • Manages server state with TanStack Query (caching, refetching, mutations)
+  • Polls the server every 5–30 seconds depending on the data type
+  • All API calls go through Axios client at /src/lib/axios-client.ts
+  • Authentication state stored in React context
+
+  SERVER LAYER
+  • Express.js handles all HTTP routes
+  • Passport.js manages authentication strategies (Local + Google OAuth)
+  • cookie-session stores session tokens server-side
+  • Zod validates all incoming request bodies
+  • asyncHandler wraps controllers, passing errors to Express error handler
+  • roleGuard checks user's workspace role against required permissions
+
+  DATA LAYER
+  • MongoDB Atlas (cloud-hosted)
+  • Mongoose ODM for schema definitions and query building
+  • TTL index on Activity collection (90-day auto-expiry)
+
+  EXTERNAL SERVICES
+  • Gmail SMTP via Nodemailer for transactional emails
+  • Google OAuth 2.0 for social login
+  • Google Gemini 1.5 Flash for AI task enhancement
+
+
+================================================================================
+6. TECH STACK
+================================================================================
+
+BACKEND
+  Runtime           Node.js 18+
+  Framework         Express.js 4.x
+  Language          TypeScript 5
+  ORM/ODM           Mongoose 8
+  Database          MongoDB Atlas
+  Auth              Passport.js (passport-local, passport-google-oauth20)
+  Session           cookie-session
+  Email             Nodemailer
+  AI                @google/generative-ai (Gemini 1.5 Flash)
+  Validation        Zod
+  Password Hash     bcrypt
+
+FRONTEND
+  Build Tool        Vite
+  Framework         React 18
+  Language          TypeScript 5
+  Styling           Tailwind CSS + shadcn/ui (Radix UI primitives)
+  State/Cache       TanStack Query v5
+  Forms             React Hook Form + Zod Resolver
+  Tables            TanStack Table v8
+  Routing           React Router v6
+  HTTP Client       Axios
+  Icons             Lucide React
+  Date Utils        date-fns
+
+
+================================================================================
+7. DATA MODELS / DATABASE SCHEMA
+================================================================================
+
+USER
+  _id             ObjectId (primary key)
+  name            String (required)
+  email           String (required, unique)
+  password        String (hashed with bcrypt, optional for OAuth users)
+  profilePicture  String (URL, optional)
+  isActive        Boolean (default: true)
+  lastLogin       Date
+  currentWorkspace ObjectId → Workspace
+  createdAt       Date
+  updatedAt       Date
+
+WORKSPACE
+  _id             ObjectId
+  name            String (required)
+  description     String (optional)
+  owner           ObjectId → User (required)
+  inviteCode      String (unique, auto-generated UUID)
+  createdAt       Date
+  updatedAt       Date
+
+ROLE
+  _id             ObjectId
+  name            String (OWNER | ADMIN | MEMBER)
+  permissions     [String] (array of permission keys)
+
+MEMBER
+  _id             ObjectId
+  userId          ObjectId → User
+  workspaceId     ObjectId → Workspace
+  role            ObjectId → Role
+  joinedAt        Date
+
+PROJECT
+  _id             ObjectId
+  name            String (required)
+  description     String (optional)
+  emoji           String (optional, default: "📊")
+  workspace       ObjectId → Workspace
+  createdBy       ObjectId → User
+  createdAt       Date
+  updatedAt       Date
+
+TASK
+  _id             ObjectId
+  taskCode        String (auto-generated, e.g. "TASK-001")
+  title           String (required)
+  description     String (optional)
+  project         ObjectId → Project
+  workspace       ObjectId → Workspace
+  assignedTo      ObjectId → User
+  status          Enum: BACKLOG | TODO | IN_PROGRESS | IN_REVIEW | DONE
+  priority        Enum: LOW | MEDIUM | HIGH | URGENT
+  dueDate         Date
+  createdBy       ObjectId → User
+  createdAt       Date
+  updatedAt       Date
+
+ACTIVITY (New)
+  _id             ObjectId
+  workspaceId     ObjectId → Workspace (indexed)
+  actorId         ObjectId → User
+  action          Enum: task_created | task_updated | task_deleted |
+                        task_status_changed | project_created |
+                        project_updated | project_deleted |
+                        member_joined | member_role_changed |
+                        invite_code_reset | workspace_updated
+  entityType      Enum: task | project | member | workspace
+  entityName      String
+  metadata        Mixed (JSON object, e.g. { newStatus: "DONE" })
+  createdAt       Date (TTL index: expires after 90 days)
+
+
+================================================================================
+8. API ARCHITECTURE
+================================================================================
+
+BASE URL: http://localhost:8000/api
+
+All protected endpoints require an authenticated session (cookie).
+
+AUTH ROUTES (/api/auth)
+  POST   /register              Register a new user
+  POST   /login                 Log in with email + password
+  POST   /logout                Log out (clear session)
+  GET    /google                Redirect to Google OAuth
+  GET    /google/callback        Google OAuth callback
+
+WORKSPACE ROUTES (/api/workspace) [Protected]
+  GET    /all                   Get all workspaces for authenticated user
+  POST   /create/new            Create a new workspace
+  GET    /:id                   Get workspace by ID
+  PUT    /:id/update            Update workspace
+  DELETE /:id/delete            Delete workspace
+  GET    /:id/members           Get all workspace members
+  GET    /:id/analytics         Workspace analytics
+  GET    /:id/join              Join via invite code
+  PUT    /:id/reset-invite-code Reset invite code
+  PUT    /members/:id/role      Change a member's role
+  POST   /invite/send/:id       Send invite email to an address
+
+PROJECT ROUTES (/api/project) [Protected]
+  POST   /workspace/:wid/create       Create a project
+  GET    /workspace/:wid/all          List all projects in workspace
+  GET    /:pid/workspace/:wid         Get a single project
+  GET    /:pid/workspace/:wid/analytics  Project analytics
+  PUT    /:pid/workspace/:wid/update  Update project
+  DELETE /:pid/workspace/:wid/delete  Delete project
+
+TASK ROUTES (/api/task) [Protected]
+  POST   /project/:pid/workspace/:wid/create  Create a task
+  GET    /workspace/:wid/all                  List tasks (with filters)
+  PUT    /:tid/project/:pid/workspace/:wid/update  Update task
+  DELETE /:tid/workspace/:wid/delete          Delete task
+
+ANALYTICS ROUTES (/api/analytics) [Protected] [NEW]
+  GET    /workspace/:wid/activity     Get paginated activity feed
+  GET    /workspace/:wid/health       Get team burnout health scores
+
+AI ROUTES (/api/ai) [Protected] [NEW]
+  POST   /enhance-task                AI enhance task description
+  POST   /suggest-tasks               AI suggest task title completions
+
+MEMBER ROUTES (/api/member) [Protected]
+  POST   /workspace/:wid/join         Join workspace with invite code
+
+
+================================================================================
+9. DATA FLOW DIAGRAMS
+================================================================================
+
+─── TASK CREATION FLOW ───────────────────────────────────────────────────────
+
+  User fills Create Task Form
+          │
+          ▼
+  [Optional] Click "✨ AI Enhance"
+          │
+          ├──► POST /api/ai/enhance-task
+          │         │
+          │         ▼
+          │    Google Gemini API
+          │         │
+          │         ▼
+          │    Return: description, priority, subtasks
+          │         │
+          │         ▼
+          │    Form fields auto-filled
+          │
+          ▼
+  Submit form → POST /api/task/project/:pid/workspace/:wid/create
+          │
+          ▼
+  Zod schema validation
+          │
+          ▼
+  roleGuard → check CREATE_TASK permission
+          │
+          ▼
+  createTaskService → Mongoose save to MongoDB
+          │
+          ├──► logActivity("task_created", ...)  →  MongoDB Activity
+          │
+          ├──► (if assignedTo) sendEmail(assignee, taskAssignedTemplate)
+          │         └──► Gmail SMTP (async, fire-and-forget)
+          │
+          ▼
+  Response: { task }
+          │
+          ▼
+  TanStack Query invalidates ["all-tasks", workspaceId]
+          │
+          ▼
+  Task table re-fetches and updates UI
+
+
+─── BURNOUT RADAR FLOW ───────────────────────────────────────────────────────
+
+  Dashboard loads "Team Burnout Radar" tab
+          │
+          ▼
+  GET /api/analytics/workspace/:wid/health
+          │
+          ▼
+  Fetch all members in workspace
+          │
+          ▼
+  MongoDB Aggregation on Tasks:
+          ┌── for each member:
+          │   ├── totalOpen = count where status ≠ DONE
+          │   ├── overdue   = count where status ≠ DONE AND dueDate < now
+          │   └── highPriority = count where priority = HIGH AND status ≠ DONE
+          └──────────────────────
+          │
+          ▼
+  For each member, compute healthScore:
+    score = 100
+    score -= overdue × 15
+    score -= highPriority × 8
+    score -= load-ratio penalty (0 / 10 / 20)
+    score = clamp(0, 100)
+          │
+          ▼
+  If score < 50 AND last alert > 24h ago:
+    sendEmail(member, burnoutAlertTemplate)   →  Gmail SMTP
+    store timestamp in memory map
+          │
+          ▼
+  Return sorted health array (lowest score first)
+          │
+          ▼
+  Client renders SVG rings + status badges
+  Auto-refetches every 30 seconds
+
+
+─── EMAIL NOTIFICATION FLOW ──────────────────────────────────────────────────
+
+  Any controller action (task/project/member event)
+          │
+          ▼
+  Look up recipient email address(es) from MongoDB
+          │
+          ▼
+  Call sendEmail(to, subject, htmlTemplate)
+  [async, non-blocking — does NOT await]
+          │
+          ▼
+  Nodemailer creates SMTP transport with Gmail credentials
+          │
+          ▼
+  Sends HTML email via Gmail SMTP
+          │
+          ◄───── Response already sent to client (not waiting for email)
+
+
+─── ACTIVITY LOGGING FLOW ────────────────────────────────────────────────────
+
+  Controller action succeeds (e.g. task created)
+          │
+          ▼
+  logActivity(workspaceId, actorId, action, entityType, entityName, metadata)
+  [async, non-blocking]
+          │
+          ▼
+  ActivityModel.create({ ... }) → saved to MongoDB
+          │
+          ▼
+  Activity Feed component polls every 10 seconds:
+    GET /api/analytics/workspace/:wid/activity
+          │
+          ▼
+  MongoDB find({ workspaceId }) → populate actor (name, profilePicture)
+          │
+          ▼
+  Rendered as timeline with actor avatar, action badge, timestamp
+
+
+================================================================================
+10. AUTHENTICATION & SECURITY
+================================================================================
+
+  • All API routes (except /api/auth/*) are protected by isAuthenticated middleware
+  • isAuthenticated checks for a valid session in the cookie
+  • Sessions are managed by cookie-session with a secret key
+  • Passwords are hashed using bcrypt (saltRounds: 10) before storage
+  • Google OAuth 2.0 handled by Passport.js (passport-google-oauth20)
+    — User is upserted on Google login (email as unique key)
+  • All inputs validated by Zod schemas before processing
+  • Invite codes are UUIDs, reset on demand
+  • CORS is configured to only allow requests from FRONTEND_ORIGIN
+  • SMTP credentials stored in environment variables, never in source code
+
+SESSION LIFECYCLE
+  • Login: passport.js creates session, stores userId
+  • Session cookie sent with every subsequent request
+  • isAuthenticated reads session → attaches user to req.user
+  • Logout: session.destroy()
+
+
+================================================================================
+11. PERMISSION SYSTEM
+================================================================================
+
+Roles: OWNER > ADMIN > MEMBER
+
+Permissions assigned per role:
+
+  OWNER permissions:
+    VIEW_ONLY, ADD_MEMBER, CHANGE_MEMBER_ROLE, REMOVE_MEMBER,
+    CREATE_PROJECT, EDIT_PROJECT, DELETE_PROJECT,
+    CREATE_TASK, EDIT_TASK, DELETE_TASK,
+    EDIT_WORKSPACE, DELETE_WORKSPACE, CHANGE_WORKSPACE_SETTINGS
+
+  ADMIN permissions:
+    VIEW_ONLY, ADD_MEMBER, CHANGE_MEMBER_ROLE, REMOVE_MEMBER,
+    CREATE_PROJECT, EDIT_PROJECT,
+    CREATE_TASK, EDIT_TASK, DELETE_TASK
+
+  MEMBER permissions:
+    VIEW_ONLY, CREATE_TASK
+
+SPECIAL RULE — ASSIGNEE BYPASS:
+  In updateTaskController, before enforcing EDIT_TASK permission,
+  the controller checks: isAssignee = (task.assignedTo._id === req.user._id)
+  If the request only changes the "status" field and the user IS the assignee,
+  the EDIT_TASK permission check is skipped.
+  This allows members to mark their own tasks complete without admin rights.
+
+
+================================================================================
+12. EMAIL NOTIFICATION SYSTEM
+================================================================================
+
+IMPLEMENTATION
+  Library: Nodemailer (Gmail SMTP)
+  Pattern: Fire-and-forget (async, non-blocking)
+  Templates: Reusable HTML template function (baseTemplate) with:
+    — Styled header: "🔗 Team Sync"
+    — Body section with event-specific content
+    — Meta info box (task name, workspace, actor)
+    — CTA button linking to the workspace
+    — Footer: "© Year Team Sync — Built by Alok Kushwaha"
+
+EMAIL EVENTS
+  Event                    | Recipients
+  ─────────────────────────────────────────────────────
+  Task created             | Task assignee
+  Task updated             | Task assignee (new assignee)
+  Task deleted             | Former task assignee
+  Project created          | Project creator + Workspace Owner
+  Project updated          | Project creator + Workspace Owner
+  Project deleted          | Project creator + Workspace Owner
+  Member joined            | Workspace Owner
+  Member role changed      | The member whose role changed
+  Workspace invite         | The invited email address
+  Burnout alert            | The overloaded team member (max 1/24h)
+
+GMAIL SMTP SETUP
+  1. Enable 2-Step Verification on Google Account
+  2. Go to: Google Account → Security → App Passwords
+  3. Generate an App Password
+  4. Use that as SMTP_PASS in backend/.env
+
+
+================================================================================
+13. AI INTEGRATION
+================================================================================
+
+PROVIDER: Google Generative AI (Gemini 1.5 Flash)
+LIBRARY: @google/generative-ai npm package
+
+HOW IT WORKS
+  1. User fills the task title in Create Task form
+  2. User clicks "✨ AI Enhance" button
+  3. Frontend calls POST /api/ai/enhance-task with:
+       { title, projectName, workspaceName, existingDescription }
+  4. Backend builds a structured prompt and calls Gemini 1.5 Flash
+  5. Gemini returns a JSON object (description, suggestedPriority,
+     estimatedHours, checklistItems)
+  6. Frontend auto-fills the description field and updates priority
+  7. Suggested subtasks displayed in a violet card below the textarea
+
+PROMPT DESIGN
+  — Model is told it is assisting on Team Sync platform
+  — Context includes: task title, project name, workspace name,
+    and any existing description (for enhancement not replacement)
+  — Instructed to return clean JSON (no markdown code fences)
+  — Backend strips markdown if model wraps in code fence anyway
+  — Falls back gracefully if JSON parse fails (uses raw text as description)
+
+TASK SUGGESTION ENDPOINT
+  POST /api/ai/suggest-tasks
+  Input: partial task title, optional project name
+  Output: array of 4 specific, contextual task title completions
+  Use case: Autocomplete / inspiration for task naming
+
+
+================================================================================
+14. ACTIVITY FEED
+================================================================================
+
+PURPOSE
+  Provides a real-time audit trail of everything that happens in a workspace.
+  Think of it like GitHub's activity feed, but for your tasks and projects.
+
+IMPLEMENTATION
+  Model: Activity (MongoDB)
+  Populated: actorId (name, profilePicture, email)
+  Sorted: newest first
+  Paginated: 20 items per page
+
+EVENTS TRACKED
+  Entity Type | Actions
+  ─────────────────────────────────────────────────────
+  task        | task_created, task_updated, task_deleted, task_status_changed
+  project     | project_created, project_updated, project_deleted
+  member      | member_joined, member_role_changed
+  workspace   | invite_code_reset, workspace_updated
+
+UI DESIGN
+  • Vertical timeline with vertical line on left
+  • Actor avatar overlaps the timeline line
+  • Each event: [Avatar] [Actor Name] [Action] [Entity Name Badge] [Timestamp]
+  • Color-coded badges per action type (green=created, red=deleted, etc.)
+  • Metadata shown (e.g. "→ New status: Done" for status changes)
+  • "Newer / Older" pagination buttons
+  • Auto-refreshes every 10 seconds
+
+STORAGE POLICY
+  • MongoDB TTL index: Activities auto-delete after 90 days
+  • This keeps the collection lean without manual cleanup
+
+
+================================================================================
+15. TEAM BURNOUT RADAR
+================================================================================
+
+PURPOSE
+  Proactively detect and prevent team burnout by computing a health score
+  for each member based on their current task load.
+
+HEALTH SCORE FORMULA
+  Start with base score of 100.
+
+  DEDUCTIONS:
+    overdue tasks          × 15   (highest weight — overdue = most stressful)
+    high-priority open     × 8    (significant concern)
+    load ratio > 1.5x avg  − 20   (significantly above everyone else)
+    load ratio > 1.2x avg  − 10   (moderately above team average)
+
+  Score is clamped to [0, 100].
+
+STATUS BANDS
+  80 – 100  →  Healthy    (green)   — Manageable load
+  50 –  79  →  At Risk    (yellow)  — Monitor this person
+   0 –  49  →  Overloaded (red)     — Send email alert
+
+AUTO-ALERT LOGIC
+  • If score < 50, send burnout alert email to the member
+  • Rate-limited to once per 24 hours per member (in-memory timestamp map)
+  • Alert email includes: score, open tasks, overdue count, high-priority count
+  • Email encourages the member to speak to their admin
+
+UI DESIGN
+  • Card per member with:
+    — Avatar + name + role
+    — SVG circular progress ring (color-coded, animated)
+    — Status badge (Healthy / At Risk / Overloaded)
+    — Task stats: X open, Y overdue, Z high-priority
+  • Team average score banner at top
+  • Sorted by health score (lowest = most at risk — shown first)
+  • Tooltip showing breakdown on hover
+  • Refresh button + auto-refreshes every 30 seconds
+
+
+================================================================================
+16. REAL-TIME DATA SYNC
+================================================================================
+
+Team Sync uses intelligent polling via TanStack Query's refetchInterval
+to keep data fresh without WebSockets:
+
+  Data Type              | Refetch Interval
+  ─────────────────────────────────────────
+  Activity Feed          | 10 seconds
+  Team Burnout Radar     | 30 seconds
+  Tasks List             | 10 seconds
+  Workspace Analytics    | 10 seconds
+  Projects               | 30 seconds
+
+  On mutation (create/update/delete), TanStack Query immediately invalidates
+  the relevant cache keys, causing an instant re-fetch — so changes made by
+  any user appear to all users within the next poll interval.
+
+
+================================================================================
+17. ENVIRONMENT CONFIGURATION
+================================================================================
+
+BACKEND: backend/.env
+─────────────────────
+  PORT                        HTTP port (default 8000)
+  NODE_ENV                    development | production
+  MONGO_URI                   MongoDB Atlas connection string
+  SESSION_SECRET              Secret for cookie-session signing
+  SESSION_EXPIRES_IN          e.g. "1d"
+  GOOGLE_CLIENT_ID            Google OAuth client ID
+  GOOGLE_CLIENT_SECRET        Google OAuth client secret
+  GOOGLE_CALLBACK_URL         e.g. http://localhost:8000/api/auth/google/callback
+  FRONTEND_ORIGIN             e.g. http://localhost:5173
+  FRONTEND_GOOGLE_CALLBACK_URL e.g. http://localhost:5173/google/callback
+  SMTP_USER                   Gmail address
+  SMTP_PASS                   Gmail App Password
+  SMTP_FROM                   Sender display name + email
+  GEMINI_API_KEY              Google AI Studio API key (free tier available)
+
+FRONTEND: client/.env
+─────────────────────
+  VITE_API_BASE_URL           Backend URL e.g. http://localhost:8000
+  VITE_GOOGLE_CLIENT_ID       Google OAuth client ID
+
+
+================================================================================
+18. PROJECT DIRECTORY STRUCTURE
+================================================================================
+
+task_management/
+├── README.md
+├── PROJECT_DOCUMENTATION.txt
+│
+├── backend/
+│   ├── .env
+│   ├── package.json
+│   └── src/
+│       ├── index.ts                  App entry point, Express setup, route registration
+│       ├── config/
+│       │   ├── app.config.ts         All env vars via getEnv helper
+│       │   ├── db.config.ts          MongoDB connection
+│       │   ├── http.config.ts        HTTP status constants
+│       │   └── passport.config.ts    Passport strategies (local + google)
+│       ├── controllers/
+│       │   ├── auth.controller.ts
+│       │   ├── workspace.controller.ts
+│       │   ├── project.controller.ts
+│       │   ├── task.controller.ts
+│       │   ├── member.controller.ts
+│       │   ├── analytics.controller.ts  [NEW] Activity Feed + Burnout Radar
+│       │   └── ai.controller.ts         [NEW] Gemini AI enhancement
+│       ├── enums/
+│       │   └── role.enum.ts          Permissions enum
+│       ├── middlewares/
+│       │   ├── asyncHandler.middleware.ts
+│       │   ├── errorHandler.middleware.ts
+│       │   └── isAuthenticated.middleware.ts
+│       ├── models/
+│       │   ├── user.model.ts
+│       │   ├── workspace.model.ts
+│       │   ├── project.model.ts
+│       │   ├── task.model.ts
+│       │   ├── member.model.ts
+│       │   ├── role.model.ts
+│       │   └── activity.model.ts     [NEW] Audit trail
+│       ├── routes/
+│       │   ├── auth.route.ts
+│       │   ├── workspace.route.ts
+│       │   ├── project.route.ts
+│       │   ├── task.route.ts
+│       │   ├── member.route.ts
+│       │   ├── analytics.route.ts    [NEW]
+│       │   └── ai.route.ts           [NEW]
+│       ├── services/
+│       │   ├── workspace.service.ts
+│       │   ├── project.service.ts
+│       │   ├── task.service.ts
+│       │   └── member.service.ts
+│       ├── utils/
+│       │   ├── sendEmail.ts          Nodemailer transport
+│       │   ├── emailTemplates.ts     All HTML email templates
+│       │   ├── logActivity.ts        [NEW] Fire-and-forget activity logger
+│       │   ├── roleGuard.ts          Permission enforcement
+│       │   └── get-env.ts            Safe env var getter
+│       └── validation/
+│           ├── workspace.validation.ts
+│           ├── project.validation.ts
+│           └── task.validation.ts
+│
+└── client/
+    ├── index.html                    Title, meta author, Google Fonts
+    ├── .env
+    ├── package.json
+    └── src/
+        ├── main.tsx
+        ├── App.tsx
+        ├── constant/                 TaskStatusEnum, TaskPriorityEnum
+        ├── context/
+        │   └── auth-provider.tsx     Global auth state
+        ├── hooks/
+        │   ├── api/                  useGetProjects, useGetTasks, etc.
+        │   ├── use-workspace-id.ts
+        │   └── use-task-table-filter.ts
+        ├── lib/
+        │   ├── api.ts                All API call functions
+        │   ├── axios-client.ts       Axios instance with baseURL + credentials
+        │   └── helper.ts             Avatar helpers, formatters
+        ├── page/
+        │   ├── auth/                 Login, Register, Google Callback
+        │   └── workspace/
+        │       ├── Dashboard.tsx     [UPDATED] Now includes Activity + Burnout tabs
+        │       ├── Tasks.tsx
+        │       ├── Members.tsx
+        │       ├── ProjectDetails.tsx
+        │       └── Settings.tsx
+        ├── types/
+        │   └── api.type.ts           TypeScript types for all API responses
+        └── components/
+            ├── logo/index.tsx        [UPDATED] Team Sync gradient logo
+            ├── asidebar/
+            │   ├── asidebar.tsx      [UPDATED] Developer credit footer
+            │   └── workspace-switcher.tsx
+            └── workspace/
+                ├── workspace-analytics.tsx
+                ├── activity-feed.tsx           [NEW]
+                ├── team-burnout-radar.tsx      [NEW]
+                ├── task/
+                │   ├── task-table.tsx
+                │   ├── create-task-form.tsx    [UPDATED] AI Enhance button
+                │   ├── edit-task-dialog.tsx
+                │   └── table/
+                │       ├── columns.tsx         [UPDATED] Inline status select
+                │       └── data.ts
+                ├── project/
+                └── member/
+                    └── invite-member.tsx       [UPDATED] Email invite UI
+
+
+================================================================================
+19. DEPLOYMENT NOTES
+================================================================================
+
+BACKEND DEPLOYMENT (e.g., Railway, Render, Heroku)
+  1. Set all environment variables in the hosting platform dashboard
+  2. Ensure MongoDB Atlas Network Access allows the server's IP
+  3. Run: npm run build && npm start
+  4. Google OAuth: add production callback URL to Google Cloud Console
+  5. Update FRONTEND_ORIGIN to production frontend URL
+
+FRONTEND DEPLOYMENT (e.g., Vercel, Netlify)
+  1. Set VITE_API_BASE_URL to production backend URL
+  2. Set VITE_GOOGLE_CLIENT_ID
+  3. Run: npm run build
+  4. Deploy /dist folder
+
+IMPORTANT NOTES
+  • Never commit .env files to version control
+  • Rotate SESSION_SECRET and GOOGLE_CLIENT_SECRET periodically
+  • Gmail App Passwords can be revoked and regenerated at any time
+  • Gemini API free tier: 15 requests/minute, 1 million tokens/day
+  • MongoDB Atlas free tier: 512 MB storage
+
+
+================================================================================
+                        END OF DOCUMENTATION
+                        Team Sync | Built by Alok Kushwaha | March 2026
+================================================================================

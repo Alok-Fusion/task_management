@@ -1,8 +1,6 @@
-import { z } from "zod";
-import { format } from "date-fns";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { CalendarIcon, Loader } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Form,
   FormControl,
@@ -11,6 +9,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -18,29 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "../../ui/textarea";
-import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
+import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
+import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
+import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
+import { toast } from "@/hooks/use-toast";
+import useWorkspaceId from "@/hooks/use-workspace-id";
+import { aiEnhanceTaskMutationFn, createTaskMutationFn } from "@/lib/api";
 import {
   getAvatarColor,
   getAvatarFallbackText,
   transformOptions,
 } from "@/lib/helper";
-import useWorkspaceId from "@/hooks/use-workspace-id";
-import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
-import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createTaskMutationFn } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { CalendarIcon, Loader, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Textarea } from "../../ui/textarea";
 
 export default function CreateTaskForm(props: {
   projectId?: string;
@@ -54,6 +55,35 @@ export default function CreateTaskForm(props: {
   const { mutate, isPending } = useMutation({
     mutationFn: createTaskMutationFn,
   });
+
+  const [aiChecklist, setAiChecklist] = useState<string[]>([]);
+
+  const { mutate: aiEnhance, isPending: isAiLoading } = useMutation({
+    mutationFn: aiEnhanceTaskMutationFn,
+    onSuccess: (result) => {
+      form.setValue("description", result.description);
+      if (result.suggestedPriority) {
+        form.setValue("priority", result.suggestedPriority as any);
+      }
+      setAiChecklist(result.checklistItems || []);
+      toast({ title: "✨ AI Enhanced!", description: "Description and priority updated.", variant: "success" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "AI Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleAiEnhance = () => {
+    const title = form.getValues("title");
+    if (!title) {
+      toast({ title: "Add a title first", description: "AI needs the task title to enhance.", variant: "destructive" });
+      return;
+    }
+    aiEnhance({
+      title,
+      existingDescription: form.getValues("description") || "",
+    });
+  };
 
   const { data, isLoading } = useGetProjectsInWorkspaceQuery({
     workspaceId,
@@ -224,15 +254,43 @@ export default function CreateTaskForm(props: {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                      Task description
-                      <span className="text-xs font-extralight ml-2">
-                        Optional
-                      </span>
-                    </FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="dark:text-[#f1f7feb5] text-sm">
+                        Task description
+                        <span className="text-xs font-extralight ml-2">Optional</span>
+                      </FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 gap-1.5 text-xs text-violet-600 border-violet-200 hover:bg-violet-50"
+                        onClick={handleAiEnhance}
+                        disabled={isAiLoading}
+                      >
+                        {isAiLoading ? (
+                          <Loader className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        AI Enhance
+                      </Button>
+                    </div>
                     <FormControl>
-                      <Textarea rows={1} placeholder="Description" {...field} />
+                      <Textarea rows={3} placeholder="Describe the task..." {...field} />
                     </FormControl>
+                    {aiChecklist.length > 0 && (
+                      <div className="mt-2 rounded-md bg-violet-50 border border-violet-100 px-3 py-2">
+                        <p className="text-xs font-semibold text-violet-700 mb-1.5">✨ AI Suggested Subtasks</p>
+                        <ul className="space-y-1">
+                          {aiChecklist.map((item, i) => (
+                            <li key={i} className="flex items-start gap-1.5 text-xs text-violet-800">
+                              <span className="mt-0.5">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -365,7 +423,7 @@ export default function CreateTaskForm(props: {
                           disabled={
                             (date) =>
                               date <
-                                new Date(new Date().setHours(0, 0, 0, 0)) || // Disable past dates
+                              new Date(new Date().setHours(0, 0, 0, 0)) || // Disable past dates
                               date > new Date("2100-12-31") //Prevent selection beyond a far future date
                           }
                           initialFocus

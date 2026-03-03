@@ -18,7 +18,9 @@ const appConfig = () => ({
 
   SMTP_USER: getEnv("SMTP_USER", ""),
   SMTP_PASS: getEnv("SMTP_PASS", ""),
-  SMTP_FROM: getEnv("SMTP_FROM", "Task Manager <no-reply@taskmanager.com>"),
+  SMTP_FROM: getEnv("SMTP_FROM", "Team Sync <no-reply@teamsync.app>"),
+
+  GEMINI_API_KEY: getEnv("GEMINI_API_KEY", ""),
 });
 
 export const config = appConfig();
