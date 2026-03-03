@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 import { Roles } from "../enums/role.enum";
+import { TaskStatusEnum } from "../enums/task.enum";
 import MemberModel from "../models/member.model";
+import ProjectModel from "../models/project.model";
 import RoleModel from "../models/roles-permission.model";
+import TaskModel from "../models/task.model";
 import UserModel from "../models/user.model";
 import WorkspaceModel from "../models/workspace.model";
 import { BadRequestException, NotFoundException } from "../utils/appError";
-import TaskModel from "../models/task.model";
-import { TaskStatusEnum } from "../enums/task.enum";
-import ProjectModel from "../models/project.model";
 
 //********************************
 // CREATE NEW WORKSPACE
@@ -170,6 +170,8 @@ export const changeMemberRoleService = async (
 
   return {
     member,
+    memberId: member.userId?.toString(),
+    roleName: role.name,
   };
 };
 
@@ -188,7 +190,7 @@ export const updateWorkspaceByIdService = async (
 
   // Update the workspace details
   workspace.name = name || workspace.name;
-  workspace.description = description || workspace.description;
+  workspace.description = description !== undefined ? description : workspace.description;
   await workspace.save();
 
   return {
@@ -259,4 +261,30 @@ export const deleteWorkspaceService = async (
     session.endSession();
     throw error;
   }
+};
+
+export const resetWorkspaceInviteCodeService = async (workspaceId: string) => {
+  const workspace = await WorkspaceModel.findById(workspaceId);
+  if (!workspace) {
+    throw new NotFoundException("Workspace not found");
+  }
+
+  (workspace as any).resetInviteCode();
+  await workspace.save();
+
+  return { workspace };
+};
+
+export const sendWorkspaceInviteEmailService = async (workspaceId: string) => {
+  const workspace = await WorkspaceModel.findById(workspaceId).select(
+    "name inviteCode owner"
+  );
+  if (!workspace) {
+    throw new NotFoundException("Workspace not found");
+  }
+  return {
+    workspaceName: workspace.name,
+    inviteCode: workspace.inviteCode,
+    ownerId: workspace.owner?.toString(),
+  };
 };

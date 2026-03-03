@@ -1,7 +1,8 @@
-import { useState } from "react";
 import { Row } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 
+import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,12 +12,12 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
-import { TaskType } from "@/types/api.type";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { deleteTaskMutationFn } from "@/lib/api";
-import { toast } from "@/hooks/use-toast";
+import { TaskType } from "@/types/api.type";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import EditTaskDialog from "../edit-task-dialog";
 
 interface DataTableRowActionsProps {
   row: Row<TaskType>;
@@ -24,6 +25,7 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const [openDeleteDialog, setOpenDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
@@ -76,7 +78,10 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
-          <DropdownMenuItem className="cursor-pointer">
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setOpenEditDialog(true)}
+          >
             Edit Task
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -100,6 +105,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         confirmText="Delete"
         cancelText="Cancel"
       />
+      <EditTaskDialog task={row.original} isOpen={openEditDialog} setIsOpen={setOpenEditDialog} />
     </>
   );
 }

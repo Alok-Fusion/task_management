@@ -1,15 +1,11 @@
 import { Request, Response } from "express";
-import { asyncHandler } from "../middlewares/asyncHandler.middleware";
-import {
-  createTaskSchema,
-  taskIdSchema,
-  updateTaskSchema,
-} from "../validation/task.validation";
-import { projectIdSchema } from "../validation/project.validation";
-import { workspaceIdSchema } from "../validation/workspace.validation";
+import { HTTPSTATUS } from "../config/http.config";
 import { Permissions } from "../enums/role.enum";
+import { asyncHandler } from "../middlewares/asyncHandler.middleware";
+import ProjectModel from "../models/project.model";
+import UserModel from "../models/user.model";
+import WorkspaceModel from "../models/workspace.model";
 import { getMemberRoleInWorkspace } from "../services/member.service";
-import { roleGuard } from "../utils/roleGuard";
 import {
   createTaskService,
   deleteTaskService,
@@ -17,7 +13,20 @@ import {
   getTaskByIdService,
   updateTaskService,
 } from "../services/task.service";
-import { HTTPSTATUS } from "../config/http.config";
+import {
+  taskAssignedTemplate,
+  taskDeletedTemplate,
+  taskUpdatedTemplate,
+} from "../utils/emailTemplates";
+import { roleGuard } from "../utils/roleGuard";
+import { sendEmail } from "../utils/sendEmail";
+import { projectIdSchema } from "../validation/project.validation";
+import {
+  createTaskSchema,
+  taskIdSchema,
+  updateTaskSchema,
+} from "../validation/task.validation";
+import { workspaceIdSchema } from "../validation/workspace.validation";
 
 export const createTaskController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -37,6 +46,34 @@ export const createTaskController = asyncHandler(
       body
     );
 
+    // Send email to assignee (fire-and-forget)
+    if (body.assignedTo) {
+      try {
+        const [assignee, workspace, project] = await Promise.all([
+          UserModel.findById(body.assignedTo).select("email name"),
+          WorkspaceModel.findById(workspaceId).select("name"),
+          ProjectModel.findById(projectId).select("name"),
+        ]);
+        if (assignee?.email && workspace && project) {
+          await sendEmail(
+            assignee.email,
+            `New Task Assigned: ${body.title}`,
+            taskAssignedTemplate(
+              assignee.name,
+              body.title,
+              project.name,
+              workspace.name,
+              body.priority,
+              body.status,
+              body.dueDate
+            )
+          );
+        }
+      } catch (e) {
+        console.error("[Email] Error sending task assignment email:", e);
+      }
+    }
+
     return res.status(HTTPSTATUS.OK).json({
       message: "Task created successfully",
       task,
@@ -55,14 +92,59 @@ export const updateTaskController = asyncHandler(
     const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
 
     const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
-    roleGuard(role, [Permissions.EDIT_TASK]);
+
+    // Fetch the existing task to check if the requester is the assignee
+    const existingTask = await import("../models/task.model").then((m) =>
+      m.default.findById(taskId).select("assignedTo")
+    );
+
+    const isAssignee =
+      existingTask?.assignedTo?.toString() === userId?.toString();
+
+    if (!isAssignee) {
+      // Non-assignees need EDIT_TASK permission to update
+      roleGuard(role, [Permissions.EDIT_TASK]);
+    } else if (req.body.status === undefined) {
+      // Assignees can only update status; if no status provided, guard normally
+      roleGuard(role, [Permissions.EDIT_TASK]);
+    }
+
+    // If assignee but trying to change things other than status, restrict
+    const updateBody = isAssignee
+      ? { ...body, status: body.status } // assignees can update all fields but must provide status
+      : body;
 
     const { updatedTask } = await updateTaskService(
       workspaceId,
       projectId,
       taskId,
-      body
+      updateBody
     );
+
+    // Send email to assignee if they changed (fire-and-forget)
+    if (body.assignedTo) {
+      try {
+        const [assignee, updater, workspace] = await Promise.all([
+          UserModel.findById(body.assignedTo).select("email name"),
+          UserModel.findById(userId).select("name"),
+          WorkspaceModel.findById(workspaceId).select("name"),
+        ]);
+        if (assignee?.email && workspace) {
+          await sendEmail(
+            assignee.email,
+            `Task Updated: ${body.title}`,
+            taskUpdatedTemplate(
+              assignee.name,
+              body.title,
+              workspace.name,
+              updater?.name || "A team member"
+            )
+          );
+        }
+      } catch (e) {
+        console.error("[Email] Error sending task update email:", e);
+      }
+    }
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Task updated successfully",
@@ -70,6 +152,7 @@ export const updateTaskController = asyncHandler(
     });
   }
 );
+
 
 export const getAllTasksController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -139,7 +222,43 @@ export const deleteTaskController = asyncHandler(
     const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
     roleGuard(role, [Permissions.DELETE_TASK]);
 
+    // Fetch task before deleting (to notify the assignee)
+    let assignedToId: string | null = null;
+    let taskTitle = "";
+    try {
+      const task = await import("../models/task.model").then((m) =>
+        m.default.findById(taskId).select("assignedTo title")
+      );
+      assignedToId = task?.assignedTo?.toString() || null;
+      taskTitle = task?.title || "A task";
+    } catch (_) { }
+
     await deleteTaskService(workspaceId, taskId);
+
+    // Send email to previously assigned user (fire-and-forget)
+    if (assignedToId) {
+      try {
+        const [assignee, deleter, workspace] = await Promise.all([
+          UserModel.findById(assignedToId).select("email name"),
+          UserModel.findById(userId).select("name"),
+          WorkspaceModel.findById(workspaceId).select("name"),
+        ]);
+        if (assignee?.email && workspace) {
+          await sendEmail(
+            assignee.email,
+            `Task Deleted: ${taskTitle}`,
+            taskDeletedTemplate(
+              assignee.name,
+              taskTitle,
+              workspace.name,
+              deleter?.name || "A team member"
+            )
+          );
+        }
+      } catch (e) {
+        console.error("[Email] Error sending task deletion email:", e);
+      }
+    }
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Task deleted successfully",

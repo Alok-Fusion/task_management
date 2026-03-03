@@ -6,6 +6,7 @@ const useGetWorkspaceMembers = (workspaceId: string) => {
     queryKey: ["members", workspaceId],
     queryFn: () => getMembersInWorkspaceQueryFn(workspaceId),
     staleTime: Infinity,
+    refetchInterval: 5000,
   });
   return query;
 };

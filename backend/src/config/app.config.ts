@@ -15,6 +15,10 @@ const appConfig = () => ({
 
   FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "localhost"),
   FRONTEND_GOOGLE_CALLBACK_URL: getEnv("FRONTEND_GOOGLE_CALLBACK_URL"),
+
+  SMTP_USER: getEnv("SMTP_USER", ""),
+  SMTP_PASS: getEnv("SMTP_PASS", ""),
+  SMTP_FROM: getEnv("SMTP_FROM", "Task Manager <no-reply@taskmanager.com>"),
 });
 
 export const config = appConfig();

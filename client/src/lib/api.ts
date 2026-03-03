@@ -1,4 +1,13 @@
-import API from "./axios-client";
+import {
+  AllWorkspaceResponseType,
+  CreateWorkspaceType,
+  CurrentUserResponseType,
+  EditWorkspaceType,
+  LoginResponseType,
+  loginType,
+  registerType,
+  WorkspaceByIdResponseType,
+} from "@/types/api.type";
 import {
   AllMembersInWorkspaceResponseType,
   AllProjectPayloadType,
@@ -14,16 +23,7 @@ import {
   ProjectByIdPayloadType,
   ProjectResponseType,
 } from "../types/api.type";
-import {
-  AllWorkspaceResponseType,
-  CreateWorkspaceType,
-  CurrentUserResponseType,
-  LoginResponseType,
-  loginType,
-  registerType,
-  WorkspaceByIdResponseType,
-  EditWorkspaceType,
-} from "@/types/api.type";
+import API from "./axios-client";
 
 export const loginMutationFn = async (
   data: loginType
@@ -106,6 +106,26 @@ export const deleteWorkspaceMutationFn = async (
   currentWorkspace: string;
 }> => {
   const response = await API.delete(`/workspace/delete/${workspaceId}`);
+  return response.data;
+};
+
+export const resetWorkspaceInviteCodeMutationFn = async (
+  workspaceId: string
+): Promise<{
+  message: string;
+}> => {
+  const response = await API.put(`/workspace/reset/invitecode/${workspaceId}`);
+  return response.data;
+};
+
+export const sendInviteEmailMutationFn = async ({
+  workspaceId,
+  email,
+}: {
+  workspaceId: string;
+  email: string;
+}): Promise<{ message: string }> => {
+  const response = await API.post(`/workspace/invite/send/${workspaceId}`, { email });
   return response.data;
 };
 
@@ -204,6 +224,24 @@ export const createTaskMutationFn = async ({
   return response.data;
 };
 
+export const editTaskMutationFn = async ({
+  workspaceId,
+  projectId,
+  taskId,
+  data,
+}: {
+  workspaceId: string;
+  projectId: string;
+  taskId: string;
+  data: any;
+}) => {
+  const response = await API.put(
+    `/task/${taskId}/project/${projectId}/workspace/${workspaceId}/update`,
+    data
+  );
+  return response.data;
+};
+
 export const getAllTasksQueryFn = async ({
   workspaceId,
   keyword,
@@ -242,7 +280,7 @@ export const deleteTaskMutationFn = async ({
   message: string;
 }> => {
   const response = await API.delete(
-    `task/${taskId}/workspace/${workspaceId}/delete`
+    `/task/${taskId}/workspace/${workspaceId}/delete`
   );
   return response.data;
 };

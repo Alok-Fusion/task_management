@@ -137,8 +137,10 @@ export const getAllTasksService = async (
   }
 
   if (filters.dueDate) {
+    const date = new Date(filters.dueDate);
     query.dueDate = {
-      $eq: new Date(filters.dueDate),
+      $gte: new Date(date.setHours(0, 0, 0, 0)),
+      $lte: new Date(date.setHours(23, 59, 59, 999)),
     };
   }
 

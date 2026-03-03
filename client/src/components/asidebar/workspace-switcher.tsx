@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Check, ChevronDown, Loader, Plus } from "lucide-react";
+import * as React from "react";
 
 import {
   DropdownMenu,
@@ -17,11 +17,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useNavigate } from "react-router-dom";
-import useWorkspaceId from "@/hooks/use-workspace-id";
 import useCreateWorkspaceDialog from "@/hooks/use-create-workspace-dialog";
-import { useQuery } from "@tanstack/react-query";
+import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getAllWorkspacesUserIsMemberQueryFn } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 type WorkspaceType = {
   _id: string;
@@ -42,6 +42,7 @@ export function WorkspaceSwitcher() {
     queryFn: getAllWorkspacesUserIsMemberQueryFn,
     staleTime: 1,
     refetchOnMount: true,
+    refetchInterval: 5000,
   });
 
   const workspaces = data?.workspaces;

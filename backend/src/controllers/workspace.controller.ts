@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
 
-import { asyncHandler } from "../middlewares/asyncHandler.middleware";
-import {
-  changeRoleSchema,
-  createWorkspaceSchema,
-  workspaceIdSchema,
-} from "../validation/workspace.validation";
+import { z } from "zod";
 import { HTTPSTATUS } from "../config/http.config";
+import { Permissions } from "../enums/role.enum";
+import { asyncHandler } from "../middlewares/asyncHandler.middleware";
+import UserModel from "../models/user.model";
+import { getMemberRoleInWorkspace } from "../services/member.service";
 import {
   changeMemberRoleService,
   createWorkspaceService,
@@ -15,12 +14,19 @@ import {
   getWorkspaceAnalyticsService,
   getWorkspaceByIdService,
   getWorkspaceMembersService,
+  resetWorkspaceInviteCodeService,
+  sendWorkspaceInviteEmailService,
   updateWorkspaceByIdService,
 } from "../services/workspace.service";
-import { getMemberRoleInWorkspace } from "../services/member.service";
-import { Permissions } from "../enums/role.enum";
+import { memberRoleChangedTemplate, workspaceInviteTemplate } from "../utils/emailTemplates";
 import { roleGuard } from "../utils/roleGuard";
-import { updateWorkspaceSchema } from "../validation/workspace.validation";
+import { sendEmail } from "../utils/sendEmail";
+import {
+  changeRoleSchema,
+  createWorkspaceSchema,
+  updateWorkspaceSchema,
+  workspaceIdSchema,
+} from "../validation/workspace.validation";
 
 export const createWorkspaceController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -112,11 +118,30 @@ export const changeWorkspaceMemberRoleController = asyncHandler(
     const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
     roleGuard(role, [Permissions.CHANGE_MEMBER_ROLE]);
 
-    const { member } = await changeMemberRoleService(
+    const { member, roleName } = await changeMemberRoleService(
       workspaceId,
       memberId,
       roleId
     );
+
+    // Notify the affected member of their role change (fire-and-forget)
+    try {
+      const [affectedUser, workspace] = await Promise.all([
+        UserModel.findById(memberId).select("email name"),
+        import("../models/workspace.model").then((m) =>
+          m.default.findById(workspaceId).select("name")
+        ),
+      ]);
+      if (affectedUser?.email && workspace) {
+        await sendEmail(
+          affectedUser.email,
+          `Your Role in ${workspace.name} Was Updated`,
+          memberRoleChangedTemplate(affectedUser.name, roleName, workspace.name)
+        );
+      }
+    } catch (e) {
+      console.error("[Email] Error sending role change email:", e);
+    }
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Member Role changed successfully",
@@ -165,6 +190,54 @@ export const deleteWorkspaceByIdController = asyncHandler(
     return res.status(HTTPSTATUS.OK).json({
       message: "Workspace deleted successfully",
       currentWorkspace,
+    });
+  }
+);
+
+export const resetWorkspaceInviteCodeController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const workspaceId = workspaceIdSchema.parse(req.params.id);
+    const userId = req.user?._id;
+
+    const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
+    roleGuard(role, [Permissions.EDIT_WORKSPACE]);
+
+    const { workspace } = await resetWorkspaceInviteCodeService(workspaceId);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Invite code reset successfully",
+      workspace,
+    });
+  }
+);
+
+export const sendWorkspaceInviteEmailController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const workspaceId = workspaceIdSchema.parse(req.params.id);
+    const recipientEmail = z.string().email().parse(req.body.email);
+    const userId = req.user?._id;
+
+    const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
+    roleGuard(role, [Permissions.EDIT_WORKSPACE]);
+
+    const { workspaceName, inviteCode, ownerId } =
+      await sendWorkspaceInviteEmailService(workspaceId);
+
+    const inviter = await UserModel.findById(userId).select("name");
+    const inviteUrl = `${process.env.FRONTEND_ORIGIN}/invite/workspace/${inviteCode}/join`;
+
+    await sendEmail(
+      recipientEmail,
+      `You're Invited to Join ${workspaceName}`,
+      workspaceInviteTemplate(
+        workspaceName,
+        inviteUrl,
+        inviter?.name || "A team member"
+      )
+    );
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: `Invite email sent to ${recipientEmail}`,
     });
   }
 );

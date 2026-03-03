@@ -1,8 +1,8 @@
+import useWorkspaceId from "@/hooks/use-workspace-id";
+import { getProjectAnalyticsQueryFn } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import AnalyticsCard from "../common/analytics-card";
-import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useQuery } from "@tanstack/react-query";
-import { getProjectAnalyticsQueryFn } from "@/lib/api";
 
 const ProjectAnalytics = () => {
   const param = useParams();
@@ -14,6 +14,7 @@ const ProjectAnalytics = () => {
     queryKey: ["project-analytics", projectId],
     queryFn: () => getProjectAnalyticsQueryFn({ workspaceId, projectId }),
     staleTime: 0,
+    refetchInterval: 5000,
     enabled: !!projectId,
   });
 

@@ -1,21 +1,21 @@
-import { FC, useState } from "react";
-import { getColumns } from "./table/columns";
-import { DataTable } from "./table/table";
-import { useParams } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
-import { DataTableFacetedFilter } from "./table/table-faceted-filter";
-import { priorities, statuses } from "./table/data";
-import useTaskTableFilter from "@/hooks/use-task-table-filter";
-import { useQuery } from "@tanstack/react-query";
-import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getAllTasksQueryFn } from "@/lib/api";
-import { TaskType } from "@/types/api.type";
+import { Input } from "@/components/ui/input";
 import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
+import useTaskTableFilter from "@/hooks/use-task-table-filter";
+import useWorkspaceId from "@/hooks/use-workspace-id";
+import { getAllTasksQueryFn } from "@/lib/api";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TaskType } from "@/types/api.type";
+import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
+import { FC, useState } from "react";
+import { useParams } from "react-router-dom";
+import { getColumns } from "./table/columns";
+import { priorities, statuses } from "./table/data";
+import { DataTable } from "./table/table";
+import { DataTableFacetedFilter } from "./table/table-faceted-filter";
 
 type Filters = ReturnType<typeof useTaskTableFilter>[0];
 type SetFilters = ReturnType<typeof useTaskTableFilter>[1];
@@ -36,7 +36,7 @@ const TaskTable = () => {
 
   const [filters, setFilters] = useTaskTableFilter();
   const workspaceId = useWorkspaceId();
-  const columns = getColumns(projectId);
+  const columns = getColumns(projectId, workspaceId);
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -59,6 +59,7 @@ const TaskTable = () => {
         pageSize,
       }),
     staleTime: 0,
+    refetchInterval: 5000,
   });
 
   const tasks: TaskType[] = data?.tasks || [];
@@ -212,24 +213,24 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
       {Object.values(filters).some(
         (value) => value !== null && value !== ""
       ) && (
-        <Button
-          disabled={isLoading}
-          variant="ghost"
-          className="h-8 px-2 lg:px-3"
-          onClick={() =>
-            setFilters({
-              keyword: null,
-              status: null,
-              priority: null,
-              projectId: null,
-              assigneeId: null,
-            })
-          }
-        >
-          Reset
-          <X />
-        </Button>
-      )}
+          <Button
+            disabled={isLoading}
+            variant="ghost"
+            className="h-8 px-2 lg:px-3"
+            onClick={() =>
+              setFilters({
+                keyword: null,
+                status: null,
+                priority: null,
+                projectId: null,
+                assigneeId: null,
+              })
+            }
+          >
+            Reset
+            <X />
+          </Button>
+        )}
     </div>
   );
 };

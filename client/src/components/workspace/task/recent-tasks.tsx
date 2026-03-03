@@ -23,6 +23,7 @@ const RecentTasks = () => {
         workspaceId,
       }),
     staleTime: 0,
+    refetchInterval: 5000,
     enabled: !!workspaceId,
   });
 
